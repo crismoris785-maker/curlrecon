@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CurlRecon Scan Report</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --text-color: #f1f5f9;
+            --card-bg: #1e293b;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #10b981;
+            --danger: #ef4444;
+            --border: #334155;
+            --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-main);
+            margin: 0;
+            padding: 2rem;
+            line-height: 1.5;
+        }
+
+        h1, h2, h3 { font-weight: 600; margin-top: 0; }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h3 { color: #94a3b8; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+        .card .value { font-size: 2rem; font-weight: 700; color: var(--text-color); }
+
+        .search-bar {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border);
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .search-bar:focus { outline: none; border-color: var(--accent); }
+
+        .target-list { display: flex; flex-direction: column; gap: 1rem; }
+
+        .target-item {
+            background-color: var(--card-bg);
+            border-radius: 0.5rem;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .target-header {
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            background-color: rgba(255,255,255,0.02);
+            transition: background-color 0.2s;
+        }
+
+        .target-header:hover { background-color: rgba(255,255,255,0.05); }
+
+        .target-url { font-weight: 600; font-size: 1.1rem; }
+
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .badge-success { background-color: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.5); }
+        .badge-danger { background-color: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.5); }
+        .badge-info { background-color: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.5); margin-right: 0.5rem;}
+
+        .target-details {
+            padding: 1.5rem;
+            border-top: 1px solid var(--border);
+            display: none;
+        }
+
+        .target-item.open .target-details { display: block; }
+
+        .section-title { font-size: 1rem; color: #cbd5e1; margin-bottom: 0.75rem; padding-bottom: 0.25rem; border-bottom: 1px solid var(--border); }
+
+        .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+
+        .kv-pair { margin-bottom: 0.5rem; }
+        .kv-key { color: #94a3b8; font-size: 0.875rem; }
+        .kv-val { font-family: monospace; word-break: break-all; }
+
+        .tags-container { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
+
+        .headers-table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; }
+        .headers-table th, .headers-table td { padding: 0.5rem; text-align: left; border-bottom: 1px solid var(--border); }
+        .headers-table th { color: #94a3b8; font-size: 0.875rem; }
+        .headers-table td { font-family: monospace; font-size: 0.875rem; word-break: break-all;}
+        
+        .status-icon { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 0.5rem; }
+        .status-on { background-color: var(--success); box-shadow: 0 0 8px var(--success); }
+        .status-off { background-color: var(--danger); box-shadow: 0 0 8px var(--danger); }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>CurlRecon Advanced Scan Report</h1>
+        <p>Total Scanned: {{ report.total_scanned }} | Duration: {{ "%.2f"|format(report.scan_duration) }}s</p>
+    </div>
+
+    <div class="summary-cards">
+        <div class="card">
+            <h3>Successful</h3>
+            <div class="value" style="color: var(--success)">{{ report.successful }}</div>
+        </div>
+        <div class="card">
+            <h3>Failed</h3>
+            <div class="value" style="color: var(--danger)">{{ report.failed }}</div>
+        </div>
+    </div>
+
+    <input type="text" id="searchInput" class="search-bar" placeholder="Search targets by URL or Tech Stack..." onkeyup="filterTargets()">
+
+    <div class="target-list" id="targetList">
+        {% for target in report.targets %}
+        <div class="target-item" data-search="{{ target.url }} {% for fp in target.fingerprints %}{{ fp.name }} {% endfor %}">
+            <div class="target-header" onclick="toggleDetails(this)">
+                <div class="target-url">{{ target.url }}</div>
+                <div>
+                    {% if target.success %}
+                        <span class="badge badge-success">{{ target.response.status_code }} OK</span>
+                    {% else %}
+                        <span class="badge badge-danger">Failed</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="target-details">
+                {% if target.success %}
+                    <div class="data-grid">
+                        <div>
+                            <div class="section-title">Overview</div>
+                            <div class="kv-pair"><span class="kv-key">Method:</span> <span class="kv-val">{{ target.request.method }}</span></div>
+                            <div class="kv-pair"><span class="kv-key">Elapsed Time:</span> <span class="kv-val">{{ "%.3f"|format(target.response.elapsed_seconds) }}s</span></div>
+                            <div class="kv-pair"><span class="kv-key">Content Length:</span> <span class="kv-val">{{ target.response.content_length }} bytes</span></div>
+                            <div class="kv-pair"><span class="kv-key">Content Type:</span> <span class="kv-val">{{ target.response.content_type }}</span></div>
+                        </div>
+                        <div>
+                            <div class="section-title">Security Score</div>
+                            <div style="font-size: 2.5rem; font-weight: 700; color: {% if target.security.score >= 80 %}var(--success){% elif target.security.score >= 40 %}#fbbf24{% else %}var(--danger){% endif %}">
+                                {{ target.security.score }}/100
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section-title">Tech Stack Fingerprints</div>
+                    <div class="tags-container">
+                        {% if target.fingerprints %}
+                            {% for fp in target.fingerprints %}
+                                <span class="badge badge-info">{{ fp.category }}: {{ fp.name }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <span style="color: #64748b; font-size: 0.875rem; font-style: italic;">No specific tech stack detected.</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="section-title">Security Headers</div>
+                    <table class="headers-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 25%">Header</th>
+                                <th style="width: 10%">Status</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for header, status in target.security.headers.items() %}
+                            <tr>
+                                <td>{{ header }}</td>
+                                <td>
+                                    {% if status.present %}
+                                        <span class="status-icon status-on" title="Present"></span>
+                                    {% else %}
+                                        <span class="status-icon status-off" title="Missing"></span>
+                                    {% endif %}
+                                </td>
+                                <td style="color: {% if not status.present %}#64748b{% endif %};">
+                                    {{ status.value if status.present else "Missing" }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div style="color: var(--danger); padding: 1rem; background-color: rgba(239, 68, 68, 0.1); border-radius: 0.25rem;">
+                        <strong>Error:</strong> {{ target.error }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        function toggleDetails(element) {
+            const item = element.parentElement;
+            item.classList.toggle('open');
+        }
+
+        function filterTargets() {
+            const input = document.getElementById('searchInput');
+            const filter = input.value.toLowerCase();
+            const list = document.getElementById('targetList');
+            const items = list.getElementsByClassName('target-item');
+
+            for (let i = 0; i < items.length; i++) {
+                const searchData = items[i].getAttribute('data-search').toLowerCase();
+                if (searchData.indexOf(filter) > -1) {
+                    items[i].style.display = "";
+                } else {
+                    items[i].style.display = "none";
+                }
+            }
+        }
+    </script>
+</body>
+</html>
