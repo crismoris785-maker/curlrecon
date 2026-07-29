@@ -17,7 +17,13 @@ Advanced CLI reconnaissance tool and HTML report generator.
 
 ## Installation
 
-You can install CurlRecon directly from PyPI:
+The recommended way to install CurlRecon on modern systems (like Kali Linux, Ubuntu, or macOS) is using `pipx`. This installs the tool in a secure, isolated environment without conflicting with your OS packages:
+
+```bash
+pipx install curlrecon
+```
+
+*Alternatively, you can install it directly via pip if you are inside a virtual environment or on a system that allows it:*
 
 ```bash
 pip install curlrecon
