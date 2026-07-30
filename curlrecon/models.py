@@ -52,6 +52,11 @@ class TargetResult(BaseModel):
     response: Optional[ResponseData] = None
     fingerprints: List[FingerprintMatch] = Field(default_factory=list)
     security: Optional[SecurityBaseline] = None
+    fuzz_results: Dict[str, int] = Field(default_factory=dict)
+    secrets_found: List[str] = Field(default_factory=list)
+    open_ports: List[int] = Field(default_factory=list)
+    subdomains: List[str] = Field(default_factory=list)
+    vulnerabilities: List[str] = Field(default_factory=list)
 
 
 class ScanReport(BaseModel):

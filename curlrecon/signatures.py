@@ -66,8 +66,8 @@ SIGNATURES = [
         html_patterns=[r"data-v-[a-zA-Z0-9]+", r"__VUE_DEVTOOLS_GLOBAL_HOOK__"],
     ),
     # Infrastructure / Server
-    Signature("Server", "Nginx", headers={"server": r"nginx"}),
-    Signature("Server", "Apache", headers={"server": r"apache"}),
+    Signature("Server", "Nginx", headers={"server": r"nginx(?:/([\d.]+))?"}),
+    Signature("Server", "Apache", headers={"server": r"apache(?:/([\d.]+))?"}),
     # CDN / WAF
     Signature("CDN", "Cloudflare", headers={"server": r"cloudflare", "cf-ray": r".*"}),
     Signature(

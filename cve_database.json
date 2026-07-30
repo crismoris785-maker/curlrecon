@@ -1,0 +1,39 @@
+{
+  "WordPress": {
+    "4.7.0": "CVE-2017-1001000 (REST API RCE)",
+    "4.7.1": "CVE-2017-1001000 (REST API RCE)",
+    "5.0.0": "CVE-2019-8942 (RCE)",
+    "5.0.3": "CVE-2019-8942 (RCE)",
+    "5.8.0": "CVE-2022-21661 (SQL Injection)",
+    "5.8.1": "CVE-2022-21661 (SQL Injection)",
+    "6.0.0": "CVE-2022-3590 (Authenticated Stored XSS)"
+  },
+  "Nginx": {
+    "1.16.0": "CVE-2019-9511 (HTTP/2 Data Dribble)",
+    "1.16.1": "CVE-2019-9511 (HTTP/2 Data Dribble)",
+    "1.20.0": "CVE-2021-23017 (DNS Resolver Off-by-One Heap Write)",
+    "1.24.0": "CVE-XXXX-XXXX (Simulated Vulnerability for Nginx 1.24.0)"
+  },
+  "Apache": {
+    "2.4.49": "CVE-2021-41773 (Path Traversal and RCE)",
+    "2.4.50": "CVE-2021-42013 (Path Traversal and RCE)",
+    "2.4.52": "CVE-2022-22720 (HTTP Request Smuggling)",
+    "2.4.53": "CVE-2022-23943 (Out-of-bounds Write in mod_sed)"
+  },
+  "PHP": {
+    "5.3.12": "CVE-2012-1823 (CGI Query String Injection)",
+    "5.4.2": "CVE-2012-1823 (CGI Query String Injection)",
+    "7.3.0": "CVE-2019-11043 (PHP-FPM Remote Code Execution)",
+    "7.3.10": "CVE-2019-11043 (PHP-FPM Remote Code Execution)",
+    "8.1.0": "CVE-2022-31625 (Uninitialized array in pg_query_params)"
+  },
+  "Express": {
+    "3.21.2": "CVE-2022-24999 (QS module prototype pollution)",
+    "4.15.2": "CVE-2017-1000228 (Open Redirect in Response.location)"
+  },
+  "JQuery": {
+    "1.12.4": "CVE-2015-9251 (Cross-Site Scripting via 3rd party CORS requests)",
+    "2.2.4": "CVE-2015-9251 (Cross-Site Scripting via 3rd party CORS requests)",
+    "3.4.0": "CVE-2020-11022 (Cross-Site Scripting via HTML parser)"
+  }
+}

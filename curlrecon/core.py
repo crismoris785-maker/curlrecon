@@ -4,9 +4,16 @@ from typing import Dict, List, Optional
 
 import httpx
 
+from urllib.parse import urlparse
+
 from curlrecon.models import RequestData, ResponseData, TargetResult
 from curlrecon.security import evaluate_security_headers
 from curlrecon.signatures import analyze_response
+from curlrecon.secrets import extract_secrets
+from curlrecon.active import fuzz_directory, scan_ports, enumerate_subdomains_crtsh
+from curlrecon.active import fuzz_directory, scan_ports, enumerate_subdomains_crtsh
+from curlrecon.vuln import check_cors, check_subdomain_takeover, check_cves
+from curlrecon.evasion import get_random_user_agent, get_spoofed_headers
 
 
 class ReconEngine:
@@ -21,9 +28,21 @@ class ReconEngine:
         location: bool = True,
         timeout: float = 10.0,
         threads: int = 10,
+        fuzz: bool = False,
+        wordlist: Optional[List[str]] = None,
+        ports: bool = False,
+        subdomains: bool = False,
+        vuln: bool = False,
+        evade: bool = False,
     ):
         self.method = method.upper()
         self.headers = headers or {}
+        
+        self.evade = evade
+        if self.evade:
+            self.headers.update(get_spoofed_headers("127.0.0.1"))
+            self.headers["User-Agent"] = get_random_user_agent()
+            
         if "user-agent" not in {k.lower() for k in self.headers}:
             self.headers["User-Agent"] = user_agent
         self.proxy = proxy
@@ -32,6 +51,11 @@ class ReconEngine:
         self.location = location
         self.timeout = timeout
         self.threads = threads
+        self.fuzz = fuzz
+        self.wordlist = wordlist
+        self.ports = ports
+        self.subdomains = subdomains
+        self.vuln = vuln
 
     async def _scan_target(self, client: httpx.AsyncClient, url: str) -> TargetResult:
         if not url.startswith("http"):
@@ -71,6 +95,42 @@ class ReconEngine:
             # Analyze
             result.fingerprints = analyze_response(resp_data)
             result.security = evaluate_security_headers(resp_headers)
+            
+            if self.vuln:
+                # 1. CORS
+                cors_vuln = await check_cors(client, url)
+                if cors_vuln:
+                    result.vulnerabilities.append(cors_vuln)
+                
+                # 2. Subdomain Takeover
+                takeover_vuln = check_subdomain_takeover(resp_data.text, resp_data.status_code)
+                if takeover_vuln:
+                    result.vulnerabilities.append(takeover_vuln)
+                
+                # 3. CVE Mapping
+                cve_vulns = check_cves(result.fingerprints)
+                result.vulnerabilities.extend(cve_vulns)
+            
+            # Active Scans
+            # 1. Secrets
+            result.secrets_found = extract_secrets(resp_data.text)
+            
+            # 2. Fuzzing
+            if self.fuzz:
+                result.fuzz_results = await fuzz_directory(client, url, self.wordlist)
+            
+            # 3. Subdomains
+            if self.subdomains:
+                parsed_url = urlparse(url)
+                domain = parsed_url.netloc.split(':')[0]
+                result.subdomains = await enumerate_subdomains_crtsh(domain)
+                
+            # 4. Port Scanning
+            if self.ports:
+                parsed_url = urlparse(url)
+                host = parsed_url.netloc.split(':')[0]
+                common_ports = [80, 443, 8080, 8443, 22, 3306, 5432, 21, 23, 25]
+                result.open_ports = await scan_ports(host, common_ports)
 
         except Exception as e:
             result.error = str(e)

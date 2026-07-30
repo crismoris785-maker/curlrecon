@@ -128,6 +128,10 @@
         .status-icon { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 0.5rem; }
         .status-on { background-color: var(--success); box-shadow: 0 0 8px var(--success); }
         .status-off { background-color: var(--danger); box-shadow: 0 0 8px var(--danger); }
+        .score-high { color: var(--success); }
+        .score-med { color: #fbbf24; }
+        .score-low { color: var(--danger); }
+        .text-muted { color: #64748b; }
 
     </style>
 </head>
@@ -177,7 +181,7 @@
                         </div>
                         <div>
                             <div class="section-title">Security Score</div>
-                            <div style="font-size: 2.5rem; font-weight: 700; color: {% if target.security.score >= 80 %}var(--success){% elif target.security.score >= 40 %}#fbbf24{% else %}var(--danger){% endif %}">
+                            <div style="font-size: 2.5rem; font-weight: 700;" class="{% if target.security.score >= 80 %}score-high{% elif target.security.score >= 40 %}score-med{% else %}score-low{% endif %}">
                                 {{ target.security.score }}/100
                             </div>
                         </div>
@@ -214,13 +218,94 @@
                                         <span class="status-icon status-off" title="Missing"></span>
                                     {% endif %}
                                 </td>
-                                <td style="color: {% if not status.present %}#64748b{% endif %};">
+                                <td class="{% if not status.present %}text-muted{% endif %}">
                                     {{ status.value if status.present else "Missing" }}
                                 </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
+
+                    {% set threat_map = {
+                        'strict-transport-security': 'MitM / SSL Stripping',
+                        'content-security-policy': 'XSS / Data Injection',
+                        'x-frame-options': 'Clickjacking',
+                        'x-content-type-options': 'MIME-Sniffing',
+                        'referrer-policy': 'Information Leak',
+                        'permissions-policy': 'Unauthorized Browser Feature Usage'
+                    } %}
+                    
+                    {% set missing_headers = [] %}
+                    {% for header, status in target.security.headers.items() %}
+                        {% if not status.present %}
+                            {% set _ = missing_headers.append(header) %}
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if missing_headers %}
+                    <div class="section-title" style="color: #ef4444; border-bottom-color: #ef4444;">Possible Threats</div>
+                    <ul style="color: #ef4444;">
+                        {% for h in missing_headers %}
+                            <li>{{ threat_map.get(h, h) }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+
+                    {% if target.vulnerabilities %}
+                    <div class="section-title" style="color: var(--danger); border-bottom-color: var(--danger);">Vulnerabilities Found</div>
+                    <ul style="color: var(--danger); font-weight: 500;">
+                        {% for vuln in target.vulnerabilities %}
+                            <li>{{ vuln }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+
+                    {% if target.secrets_found %}
+                    <div class="section-title" style="color: #f59e0b; border-bottom-color: #f59e0b;">Secrets Extracted</div>
+                    <ul style="color: #f59e0b; font-family: monospace;">
+                        {% for secret in target.secrets_found %}
+                            <li>{{ secret }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+
+                    {% if target.open_ports or target.subdomains or target.fuzz_results %}
+                    <div class="section-title">Active Scan Results</div>
+                    <div class="data-grid">
+                        {% if target.open_ports %}
+                        <div>
+                            <strong>Open Ports:</strong>
+                            <div class="tags-container" style="margin-top: 0.5rem;">
+                                {% for port in target.open_ports %}
+                                    <span class="badge badge-success">{{ port }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if target.fuzz_results %}
+                        <div>
+                            <strong>Discovered Paths:</strong>
+                            <ul style="font-family: monospace; font-size: 0.875rem; color: #94a3b8; list-style-type: none; padding-left: 0; margin-top: 0.5rem;">
+                                {% for path in target.fuzz_results %}
+                                    <li><a href="{{ target.url.rstrip('/') }}/{{ path }}" target="_blank" style="color: var(--accent);">/{{ path }}</a></li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    {% if target.subdomains %}
+                    <div style="margin-top: 1rem;">
+                        <strong>Subdomains (via crt.sh):</strong>
+                        <div class="tags-container" style="margin-top: 0.5rem;">
+                            {% for sub in target.subdomains %}
+                                <span class="badge badge-info">{{ sub }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endif %}
                 {% else %}
                     <div style="color: var(--danger); padding: 1rem; background-color: rgba(239, 68, 68, 0.1); border-radius: 0.25rem;">
                         <strong>Error:</strong> {{ target.error }}

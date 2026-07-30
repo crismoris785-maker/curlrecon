@@ -38,6 +38,12 @@ console = Console()
 @click.option(
     "-o", "--output", type=click.Path(), help="Path to write JSON output directly"
 )
+@click.option("--fuzz", is_flag=True, help="Enable directory and file fuzzing")
+@click.option("--wordlist", help="Path to custom wordlist for fuzzing")
+@click.option("--ports", is_flag=True, help="Enable port scanning")
+@click.option("--subdomains", is_flag=True, help="Enable subdomain enumeration")
+@click.option("--vuln", is_flag=True, help="Enable vulnerability detection (CORS, Takeover, CVEs)")
+@click.option("--evade", is_flag=True, help="Enable WAF evasion (Spoof IP, Random User-Agent)")
 def cli(
     target,
     request,
@@ -53,6 +59,12 @@ def cli(
     json_out,
     html_out,
     output,
+    fuzz,
+    wordlist,
+    ports,
+    subdomains,
+    vuln,
+    evade,
 ):
     """CurlRecon - Advanced CLI Reconnaissance Tool"""
     from rich.prompt import Prompt, Confirm
@@ -108,6 +120,17 @@ def cli(
             
             if Confirm.ask("\nGenerate HTML Report?", default=True):
                 html_out = Prompt.ask("Report filename", default="report.html")
+                
+            if Confirm.ask("\nEnable Active Scanning (Fuzzing, Ports, Subdomains)?", default=False):
+                fuzz = Confirm.ask("Enable Directory Fuzzing?", default=True)
+                ports = Confirm.ask("Enable Port Scanning?", default=True)
+                subdomains = Confirm.ask("Enable Subdomain Enumeration?", default=True)
+
+            if Confirm.ask("\nEnable Vulnerability Detection (CORS, Takeovers, CVEs)?", default=False):
+                vuln = True
+                
+            if Confirm.ask("\nEnable WAF Evasion (Spoofed IP & Random User-Agent)?", default=False):
+                evade = True
             
             break
 
@@ -118,6 +141,11 @@ def cli(
     if file:
         with open(file, "r") as f:
             targets.extend([line.strip() for line in f if line.strip()])
+
+    wordlist_lines = None
+    if wordlist:
+        with open(wordlist, "r") as w:
+            wordlist_lines = [line.strip() for line in w if line.strip()]
 
     headers_dict = {}
     for h in header:
@@ -135,6 +163,12 @@ def cli(
         location=location,
         timeout=timeout,
         threads=threads,
+        fuzz=fuzz,
+        wordlist=wordlist_lines,
+        ports=ports,
+        subdomains=subdomains,
+        vuln=vuln,
+        evade=evade,
     )
 
     if not json_out:
@@ -186,6 +220,44 @@ def cli(
                     console.print(
                         f"  [cyan]Security Score:[/cyan] [{score_color}]{score}/100[/{score_color}]"
                     )
+
+                    missing_headers = [h for h, stat in res.security.headers.items() if not stat.present]
+                    if missing_headers:
+                        threat_map = {
+                            "strict-transport-security": "MitM / SSL Stripping",
+                            "content-security-policy": "XSS / Data Injection",
+                            "x-frame-options": "Clickjacking",
+                            "x-content-type-options": "MIME-Sniffing",
+                            "referrer-policy": "Information Leak",
+                            "permissions-policy": "Unauthorized Browser Feature Usage"
+                        }
+                        threats = [threat_map.get(h, h) for h in missing_headers]
+                        console.print(f"  [red]Possible Threats:[/red] {', '.join(threats)}")
+
+                if res.vulnerabilities:
+                    console.print(f"  [red bold]Vulnerabilities Found:[/red bold]")
+                    for v in res.vulnerabilities:
+                        console.print(f"    - [red]{v}[/red]")
+
+                if res.secrets_found:
+                    console.print(f"  [red bold]Secrets Found:[/red bold] {', '.join(res.secrets_found)}")
+                
+                if res.open_ports:
+                    ports_str = ', '.join(map(str, res.open_ports))
+                    console.print(f"  [magenta]Open Ports:[/magenta] {ports_str}")
+                    
+                if res.subdomains:
+                    console.print(f"  [yellow]Subdomains Discovered:[/yellow] {len(res.subdomains)} found")
+                    # Print first 5
+                    for sub in res.subdomains[:5]:
+                        console.print(f"    - {sub}")
+                    if len(res.subdomains) > 5:
+                        console.print(f"    - ... and {len(res.subdomains) - 5} more")
+
+                if res.fuzz_results:
+                    console.print(f"  [green]Hidden Paths (Fuzzing):[/green]")
+                    for path, status in res.fuzz_results.items():
+                        console.print(f"    - /{path} (Status: {status})")
             else:
                 console.print(
                     f"\n[bold]{res.url}[/bold] -> [red]FAILED[/red]: {res.error}"
